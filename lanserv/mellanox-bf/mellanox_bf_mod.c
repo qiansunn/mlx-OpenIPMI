@@ -32,7 +32,7 @@
 #define LOAD_IPMB_DRIVER_CMD 2
 
 #define IPMB_HOST_PATH           "modinfo ipmb_host --field filename"
-#define FLAG_PATH                "/run/emu_param/ipmb_host_driver_loaded"
+#define FLAG_PATH                "/run/emu_param/ipmb_host_driver_loading"
 #define IPMB_HOST_PARAM          "slave_add=0x10"
 #define REGISTER_I2C_NEW_DEVICE  "echo ipmb-host 0x1011 > /sys/bus/i2c/devices/i2c-1/new_device"
 #define I2C_NEW_DEVICE           "/sys/bus/i2c/devices/i2c-1/1-1011/"
@@ -186,6 +186,12 @@ static void handle_oem_command(lmc_data_t    *mc,
             rdata[1] = 0x1;
         } else {
             rdata[1] = 0x0;
+        }
+
+        /* Remove the flag file after attempting to load the driver, regardless of the outcome */
+        if (remove(FLAG_PATH) != 0) {
+            rdata[1] = 0x3;
+            return;
         }
     }
     break;
