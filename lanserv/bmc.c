@@ -331,6 +331,7 @@ ipmi_emu_handle_msg(emu_data_t    *emu,
 	    return;
 	if ((omsg->data[0] & 0x3f) != 0) {
 	    ordata[0] = IPMI_INVALID_DATA_FIELD_CC;
+	    fprintf(stderr, "Qian:  IPMI_INVALID_DATA_FIELD_CC\n");
 	    *ordata_len = 1;
 	    return;
 	}
@@ -355,6 +356,7 @@ ipmi_emu_handle_msg(emu_data_t    *emu,
 	    data_len--;
 	    if (data_len < 7) {
 		ordata[0] = IPMI_REQUEST_DATA_LENGTH_INVALID_CC;
+		fprintf(stderr, "Qian:  IPMI_REQUEST_DATA_LENGTH_INVALID_CC\n");
 		*ordata_len = 1;
 		return;
 	    }
@@ -434,6 +436,7 @@ ipmi_emu_handle_msg(emu_data_t    *emu,
 
 	if (rchan->recv_in_q) {
 	    if (rchan->recv_in_q(srcmc->channels[15], rmsg))
+		fprintf(stderr, "Qian:  rchan->recv_in_q(srcmc->channels[15], rmsg)\n");
 		return;
 	}
 
@@ -505,6 +508,10 @@ ipmi_emu_alloc(void *user_data, ipmi_emu_sleep_cb sleeper, sys_data_t *sysinfo)
 	data->sleeper = sleeper;
 	data->sysinfo = sysinfo;
     }
+	else
+	{
+		fprintf(stderr, "Qian:  Unable to malloc(sizeof(*data));\n");
+	}
 	
     return data;
 }
@@ -598,9 +605,13 @@ ipmi_mc_enable(lmc_data_t *mc)
     for (i = 0; i < IPMI_MAX_CHANNELS; i++) {
 	channel_t *chan = mc->channels[i];
 	int err = 0;
-
+	fprintf(stderr, "Qian:  chan is %p\n", chan);
 	if (!chan)
-	    continue;
+	{
+		fprintf(stderr, "Qian:  chan is NULL\n");
+		continue;
+	}
+	    
 
 	chan->smi_send = sys->csmi_send;
 	chan->oem.user_data = sys->info;
@@ -617,9 +628,16 @@ ipmi_mc_enable(lmc_data_t *mc)
 		((chan->channel_num != 0) || (chan->prim_ipmb_in_cfg_file)))
 	    err = sys->ipmb_channel_init(sys->info, chan);
 	else 
-	    chan_init(chan);
+	{
+		fprintf(stderr, "Qian:  chan_init(chan);\n");
+		fprintf(stderr, "Qian:  chan->medium_type: %d\n", chan->medium_type);
+		fprintf(stderr, "Qian:  chan->channel_num: %d\n", chan->channel_num);
+		fprintf(stderr, "Qian:  chan->prim_ipmb_in_cfg_file: %d\n", chan->prim_ipmb_in_cfg_file);
+		chan_init(chan);
+	}
 	if (err) {
-	    chan->log(chan, SETUP_ERROR, NULL,
+		fprintf(stderr, "Qian:  Unable to initialize channel for IPMB 0x%2.2x, channel %d: %d\n", mc->ipmb, chan->channel_num, err);
+		chan->log(chan, SETUP_ERROR, NULL,
 		      "Unable to initialize channel for "
 		      "IPMB 0x%2.2x, channel %d: %d",
 		      mc->ipmb, chan->channel_num, err);
@@ -767,6 +785,7 @@ ipmi_mc_alloc_unconfigured(sys_data_t *sys, unsigned char ipmb,
 	if (mc->configured) {
 	    sys->log(sys, SETUP_ERROR, NULL,
 		     "MC IPMB specified twice: 0x%x.", ipmb);
+		fprintf(stderr, "Qian:  MC IPMB specified twice: 0x%x.\n", ipmb);
 	    return EBUSY;
 	}
 	goto out;
@@ -774,7 +793,11 @@ ipmi_mc_alloc_unconfigured(sys_data_t *sys, unsigned char ipmb,
 
     mc = malloc(sizeof(*mc));
     if (!mc)
-	return ENOMEM;
+	{
+		fprintf(stderr, "Qian:  Unable to malloc(sizeof(*mc))\n");
+		return ENOMEM;
+	}
+	
     memset(mc, 0, sizeof(*mc));
     mc->ipmb = ipmb;
     sys->ipmb_addrs[ipmb] = mc;

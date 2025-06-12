@@ -744,10 +744,11 @@ read_config(sys_data_t *sys,
     char         *tokptr;
     int          err = 0;
     const char   *errstr;
-
+	fprintf(stderr, " Qian new2: in read_config configuration file: '%s'\n", config_file);
     if (!f) {
 	fprintf(stderr, "Unable to open configuration file '%s'\n",
 		config_file);
+	fprintf(stderr, " Qian: Unable to open configuration file\n");
 	return -1;
     }
 
@@ -755,9 +756,27 @@ read_config(sys_data_t *sys,
     while (fgets(buf, sizeof(buf), f) != NULL) {
 	line++;
 
-	tok = mystrtok(buf, " \t\n", &tokptr);
-	if (!tok || (tok[0] == '#'))
+	fprintf(stderr, " Qian: read line %d: '%s'\n", line, buf);
+
+	// Skip null bytes at the beginning of the line
+	char *line_start = buf;
+	char *buf_end = buf + sizeof(buf) - 1;
+	while (*line_start == '\0' && line_start < buf_end) {
+	    line_start++;
+	}
+
+	// If we've reached the end of the line after skipping nulls, skip this line
+	if (*line_start == '\n' || *line_start == '\r' || *line_start == '\0') {
+	    fprintf(stderr, " Qian: in read_config skip empty line after nulls\n");
 	    continue;
+	}
+
+	tok = mystrtok(line_start, " \t\n", &tokptr);
+	fprintf(stderr, " Qian: in read_config tok: '%s'\n", tok);
+	if (!tok || (tok[0] == '#')) {
+		fprintf(stderr, " Qian: in read_config skip tok: '%s'\n", tok);
+	    continue;
+	}
 
 	if (strcmp(tok, "define") == 0) {
 	    const char *varname;
@@ -829,7 +848,9 @@ read_config(sys_data_t *sys,
 	} else if (strcmp(tok, "user") == 0) {
 	    err = get_user(&tokptr, sys, &errstr);
 	} else if (strcmp(tok, "ipmb") == 0) {
+		fprintf(stderr, " Qian: before ipmbserv_read_config\n");
 	    err = ipmbserv_read_config(&tokptr, sys, &errstr);
+		fprintf(stderr, " Qian: after ipmbserv_read_config\n");
 	} else if (strcmp(tok, "serial") == 0) {
 	    err = serserv_read_config(&tokptr, sys, &errstr);
 	} else if (strcmp(tok, "sol") == 0) {

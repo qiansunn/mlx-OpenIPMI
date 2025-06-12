@@ -109,6 +109,28 @@ typedef struct isim_fd {
     struct isim_fd *next;
 } isim_fd_t;
 
+
+static void
+write_string_to_file(const char *str)
+{
+    FILE *fp;
+    const char *filename = "/tmp/ipmi_sim.log";
+
+    if (!str) {
+        return;
+    }
+    
+    fp = fopen(filename, "a");
+    if (!fp) {
+        fprintf(stderr, "Unable to open file %s for appending: %s\n", 
+                filename, strerror(errno));
+        return;
+    }
+    
+    fprintf(fp, "%s", str);
+    fclose(fp);
+}
+
 static isim_fd_t *isim_fds = NULL;
 
 static void isim_add_fd(int fd)
@@ -609,15 +631,23 @@ static void
 ipmb_send(ipmbserv_data_t *ipmb, unsigned char *data, unsigned int data_len)
 {
     int rv;
+    int err;
 
     if (ipmb->fd == -1)
-	/* Not connected */
-	return;
+    {
+        //write_string_to_file("Qian: ipmb->fd == -1\n");
+        fprintf(stderr, "Qian: Unable to open f (ipmb->fd == -1) 0x%x\n", err);
+        return;
+    }
+
 
     rv = write(ipmb->fd, data, data_len);
     if (rv) {
-	/* FIXME - log an error. */
+        //write_string_to_file("Qian: rv = write(ipmb->fd, data, data_len)\n");
+	 fprintf(stderr, "Qian:  write(ipmb->fd, data, data_len); 0x%x\n", err);
     }
+    else
+        fprintf(stderr, "Qian:  Unable to write(ipmb->fd, data, data_len); 0x%x\n", err);
 }
 
 static int
@@ -628,6 +658,7 @@ ipmb_channel_init(void *info, channel_t *chan)
     int err;
     os_hnd_fd_id_t *fd_id;
 
+    fprintf(stderr, "Qian: Starting ipmb 2 sim\n");
     ipmb->os_hnd = data->os_hnd;
     ipmb->user_info = data;
     ipmb->send_out = ipmb_send;
@@ -1185,8 +1216,10 @@ ipmi_add_io_hnd(sys_data_t *sys, int fd,
     int err;
 
     io = malloc(sizeof(*io));
-    if (!io)
-	return ENOMEM;
+    if (!io) {
+        fprintf(stderr, "Qian:  Unable to malloc(sizeof(*io)); 0x%x\n", err);
+        return ENOMEM;
+    }
 
     io->data = data;
     io->read_cb = read_hnd;
@@ -1195,8 +1228,9 @@ ipmi_add_io_hnd(sys_data_t *sys, int fd,
     err = data->os_hnd->add_fd_to_wait_for(data->os_hnd, fd, io_read_ready, io,
 					   NULL,  &io->id);
     if (err) {
-	free(io);
-	return err;
+        fprintf(stderr, "Qian:  Unable to data->os_hnd->add_fd_to_wait_for(data->os_hnd, fd, io_read_ready, io, NULL,  &io->id); 0x%x\n", err);
+        free(io);
+        return err;
     }
     data->os_hnd->set_fd_handlers(data->os_hnd, io->id, io_write_ready,
 				  io_except_ready);
@@ -1467,7 +1501,8 @@ main(int argc, const char *argv[])
     poptFreeContext(poptCtx);
 
     printf("IPMI Simulator version %s\n", PVERSION);
-
+    fprintf(stderr, " stderr Starting ipmi sim\n");
+    //write_string_to_file("Qian: Starting ipmi sim\n");
     global_misc_data = &data;
 
     data.os_hnd = ipmi_posix_setup_os_handler();
@@ -1475,7 +1510,7 @@ main(int argc, const char *argv[])
 	fprintf(stderr, "Unable to allocate OS handler\n");
 	exit(1);
     }
-
+    fprintf(stderr, " Qian: 222 Starting ipmi sim\n");
     err = os_handler_alloc_waiter_factory(data.os_hnd, 0, 0,
 					  &data.waiter_factory);
     if (err) {
@@ -1488,8 +1523,10 @@ main(int argc, const char *argv[])
 	fprintf(stderr, "Unable to allocate timer: 0x%x\n", err);
 	exit(1);
     }
-
+    fprintf(stderr, " Qian: 3 Starting ipmi sim\n");
+    fprintf(stderr, " Qian: 3.1 Starting ipmi sim\n");
     sysinfo_init(&sysinfo);
+    fprintf(stderr, " Qian: 3.2 Starting ipmi sim\n");
     sysinfo.info = &data;
     sysinfo.alloc = balloc;
     sysinfo.free = bfree;
@@ -1520,7 +1557,6 @@ main(int argc, const char *argv[])
 	perror("Creating signal handling pipe");
 	exit(1);
     }
-
     act.sa_handler = handle_sigchld;
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
@@ -1538,9 +1574,9 @@ main(int argc, const char *argv[])
 	fprintf(stderr, "Unable to sigchld pipe wait: 0x%x\n", err);
 	exit(1);
     }
-
+    fprintf(stderr, " Qian: 4 Starting ipmi sim\n");
     data.emu = ipmi_emu_alloc(&data, sleeper, &sysinfo);
-
+    fprintf(stderr, " Qian: 5 Starting ipmi sim\n");
     /* Set this up for console I/O, even if we don't use it. */
     stdio_console.data = &data;
     stdio_console.outfd = 1;
@@ -1559,12 +1595,13 @@ main(int argc, const char *argv[])
     stdio_console.next = NULL;
     stdio_console.prev = NULL;
     data.consoles = &stdio_console;
-
+    fprintf(stderr, " Qian new: 6 Starting ipmi sim\n");
     err = ipmi_mc_alloc_unconfigured(&sysinfo, 0x20, &mc);
+    fprintf(stderr, " Qian new: 7 Starting ipmi sim\n");
     if (err) {
 	if (err == ENOMEM)
 	    fprintf(stderr, "Out of memory allocation BMC MC\n");
-	exit(1);
+	 exit(1);
     }
     sysinfo.mc = mc;
     sysinfo.chan_set = ipmi_mc_get_channelset(mc);
@@ -1572,9 +1609,9 @@ main(int argc, const char *argv[])
     sysinfo.cpef = ipmi_mc_get_pef(mc);
     sysinfo.cusers = ipmi_mc_get_users(mc);
     sysinfo.sol = ipmi_mc_get_sol(mc);
-
     if (read_config(&sysinfo, config_file, print_version))
 	exit(1);
+    fprintf(stderr, " Qian: after read_config\n");
 
     if (print_version)
 	exit(0);

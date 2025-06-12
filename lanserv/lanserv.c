@@ -166,6 +166,28 @@ ipmb_addr_change_dev(channel_t     *chan,
     }    
 }
 
+
+static void
+write_string_to_file(const char *str)
+{
+    FILE *fp;
+    const char *filename = "/tmp/ipmi_sim.log";
+
+    if (!str) {
+        return;
+    }
+    
+    fp = fopen(filename, "a");
+    if (!fp) {
+        fprintf(stderr, "Unable to open file %s for appending: %s\n", 
+                filename, strerror(errno));
+        return;
+    }
+    
+    fprintf(fp, "%s", str);
+    fclose(fp);
+}
+
 static int
 smi_send_dev(channel_t *chan, msg_t *msg)
 {
@@ -762,6 +784,9 @@ main(int argc, const char *argv[])
     unsigned int debug = 0;
     channel_t *channels[16];
 
+	printf(stderr, "Qian: printf Starting ipmi lanserv\n");
+    //write_string_to_file("Qian: Starting ipmi lanserv\n");
+
 #if HAVE_SYSLOG
     openlog(argv[0], LOG_CONS, LOG_DAEMON);
 #endif
@@ -810,16 +835,18 @@ main(int argc, const char *argv[])
     sysinfo.debug = debug;
     sysinfo.get_monotonic_time = ipmi_get_monotonic_time;
     sysinfo.get_real_time = ipmi_get_real_time;
-
+	printf(stderr, "Qian: 12 Starting ipmi lanserv\n");
     memset(channels, 0, sizeof(channels));
     sysinfo.chan_set = channels;
 
     if (read_config(&sysinfo, config_file, 0))
 	exit(1);
-
+	printf(stderr, "Qian: 13 Starting ipmi lanserv\n");
     data.smi_fd = ipmi_open(ipmi_dev);
     if (data.smi_fd == -1)
+	printf(stderr, "Qian: 15 Starting ipmi lanserv\n");
 	exit(1);
+	printf(stderr, "Qian: 14 Starting ipmi lanserv\n");
     err = data.os_hnd->add_fd_to_wait_for(data.os_hnd, data.smi_fd,
 					  handle_msg_ipmi_dev, &data,
 					  NULL, &fd_id);

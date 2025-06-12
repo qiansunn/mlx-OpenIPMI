@@ -150,17 +150,18 @@ ipmbserv_handle_data(ipmbserv_data_t *ipmb, uint8_t *imsg, unsigned int len)
 int
 ipmbserv_read_config(char **tokptr, sys_data_t *sys, const char **errstr)
 {
+    fprintf(stderr, "Qian: in ipmbserv_read_config\n");
     ipmbserv_data_t *ipmb;
     unsigned int chan_num;
     int err;
     const char *tok;
     char *ipmbdev;
-
     err = get_uint(tokptr, &chan_num, errstr);
     if (err)
 	return -1;
-
+    fprintf(stderr, "Qian: in ipmbserv_read_config2\n");
     if (chan_num >= IPMI_MAX_CHANNELS) {
+    fprintf(stderr, "Qian: Invalid channel number, must be 0-15\n");
 	*errstr = "Invalid channel number, must be 0-15";
 	return -1;
     }
@@ -169,29 +170,36 @@ ipmbserv_read_config(char **tokptr, sys_data_t *sys, const char **errstr)
      * Allow an IPMB channel to override the default channel 0.
      */
     if (chan_num != 0 && sys->chan_set[chan_num]) {
+        fprintf(stderr, "Qian: Channel already in use\n");
 	    *errstr = "Channel already in use";
 	    return -1;
     }
 
     tok = mystrtok(NULL, " \t\n", tokptr);
+    fprintf(stderr, "Qian: tok1 = '%s'\n", tok ? tok : "NULL");
     if (!tok || strcmp(tok, "ipmb_dev_int")) {
+    fprintf(stderr, "Qian: Config file missing\n");
 	*errstr = "Config file missing <linux ipmb driver name>";
 	return -1;
     }
 
     tok = mystrtok(NULL, " \t\n", tokptr);
+    fprintf(stderr, "Qian: tok2 = '%s'\n", tok ? tok : "NULL");
     if (strlen(tok) > IPMIDEV_MAX_SIZE) {
+    fprintf(stderr, "Qian: Length of device file name\n");
 	*errstr = "Length of device file name %s > 15";
 	return -1;
     }
     ipmbdev = strdup(tok);
     if (!ipmbdev) {
+    fprintf(stderr, "Qian: Unable to alloc device file name\n");
 	*errstr = "Unable to alloc device file name";
 	return -1;
     }
 
     ipmb = malloc(sizeof(*ipmb));
     if (!ipmb) {
+    fprintf(stderr, "Qian: Out of memory\n");
 	free(ipmbdev);
 	*errstr = "Out of memory";
 	return -1;
@@ -214,6 +222,6 @@ ipmbserv_read_config(char **tokptr, sys_data_t *sys, const char **errstr)
 	ipmb->channel.prim_ipmb_in_cfg_file = 0;
 
     sys->chan_set[chan_num] = &ipmb->channel;
-
+    fprintf(stderr, "Qian: in ipmbserv_read_config end\n");
     return 0;
 }

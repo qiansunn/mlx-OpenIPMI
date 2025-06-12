@@ -74,11 +74,18 @@ ipmi_oem_send_msg(channel_t     *chan,
 {
     msg_t *nmsg;
     int   rv;
-
+    fprintf(stderr, "Qian:  ipmi_oem_send_msg(chan, netfn, cmd, data, len, oem_data);\n");
+    fprintf(stderr, "Qian:  chan: %p\n", chan);
+    fprintf(stderr, "Qian:  netfn: %d\n", netfn);
+    fprintf(stderr, "Qian:  cmd: %d\n", cmd);
+    fprintf(stderr, "Qian:  data: %p\n", data);
+    fprintf(stderr, "Qian:  len: %d\n", len);
+    fprintf(stderr, "Qian:  oem_data: %ld\n", oem_data);
     nmsg = chan->alloc(chan, sizeof(*nmsg)+len);
     if (!nmsg) {
 	chan->log(chan, OS_ERROR, NULL,
 		  "SMI message: out of memory");
+    fprintf(stderr, "Qian:  ipmi_oem_send_msg(chan, netfn, cmd, data, len, oem_data) out of memory\n");
 	return ENOMEM;
     }
 
@@ -95,9 +102,10 @@ ipmi_oem_send_msg(channel_t     *chan,
     if (rv) {
 	chan->log(chan, OS_ERROR, nmsg,
 		  "SMI send: error %d", rv);
+	fprintf(stderr, "Qian:  ipmi_oem_send_msg(chan, netfn, cmd, data, len, oem_data) smi_send error %d\n", rv);
 	chan->free(chan, nmsg);
     }
-
+    fprintf(stderr, "Qian:  ipmi_oem_send_msg(chan, netfn, cmd, data, len, oem_data) smi_send done %d\n", rv);
     return rv;
 }
 
@@ -212,7 +220,7 @@ int
 chan_init(channel_t *chan)
 {
     int rv = 0;
-
+    fprintf(stderr, "Qian:  chan_init(chan);\n");
     /* If the calling code already hasn't set up an OEM handler, we
        set up our own to look for a get device id.  When we find a get
        device ID, we call the OEM code to install their own.  Hijack
@@ -225,8 +233,9 @@ chan_init(channel_t *chan)
 	rv = ipmi_oem_send_msg(chan,
 			       IPMI_APP_NETFN, IPMI_GET_DEVICE_ID_CMD,
 			       NULL, 0, 1);
+    fprintf(stderr, "Qian:  chan_init(chan) done %d\n", rv);
     }
-
+    
     return rv;
 }
 
