@@ -45,3 +45,4 @@ set_working_mc 0x30
 # It should return 0 on success or an errno no failure.
 loadlib "@pkglib@/mellanox_bf_mod.so" ""
 
+  ipmb 2 ipmb_dev_int /dev/ipmb-5
