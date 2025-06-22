@@ -631,7 +631,7 @@ ipmb_channel_init(void *info, channel_t *chan)
     ipmb->os_hnd = data->os_hnd;
     ipmb->user_info = data;
     ipmb->send_out = ipmb_send;
-
+    fprintf(stderr, "Qian: ipmb_channel_init: ipmbdev=%s\n", ipmb->ipmbdev);
     err = ipmbserv_init(ipmb);
     if (err) {
         fprintf(stderr, "Unable to init ipmb: 0x%x\n", err);

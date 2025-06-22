@@ -155,7 +155,7 @@ ipmbserv_read_config(char **tokptr, sys_data_t *sys, const char **errstr)
     int err;
     const char *tok;
     char *ipmbdev;
-
+    *errstr = "Qian: test ipmbserv_read_config can print";
     err = get_uint(tokptr, &chan_num, errstr);
     if (err)
 	return -1;
