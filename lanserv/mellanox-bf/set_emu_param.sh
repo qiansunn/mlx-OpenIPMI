@@ -25,10 +25,16 @@ oob_ip=$3
 external_ddr=$4
 loop_period=$5
 bf_version=$6
-#Fru_type
-# 0 = Defualt FRU type. 
-# 1 = In this FRU the part number will be under extra and the version will be under part number.
-fru_type=$7
+# Append all parameters to /tmp/params (create if not exist, do not overwrite)
+{
+    echo "bffamily=$bffamily"
+    echo "support_ipmb=$support_ipmb"
+    echo "oob_ip=$oob_ip"
+    echo "external_ddr=$external_ddr"
+    echo "loop_period=$loop_period"
+    echo "bf_version=$bf_version"
+    echo "---"
+} >> /tmp/params
 
 # This timer is used to update the FRUs
 # once every hour. It also informs the user
