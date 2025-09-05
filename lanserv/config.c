@@ -755,9 +755,22 @@ read_config(sys_data_t *sys,
     while (fgets(buf, sizeof(buf), f) != NULL) {
 	line++;
 
-	tok = mystrtok(buf, " \t\n", &tokptr);
-	if (!tok || (tok[0] == '#'))
+	// Skip null bytes at the beginning of the line
+	char *line_start = buf;
+	char *buf_end = buf + sizeof(buf) - 1;
+	while (*line_start == '\0' && line_start < buf_end) {
+	    line_start++;
+	}
+
+	// If we've reached the end of the line after skipping nulls, skip this line
+	if (*line_start == '\n' || *line_start == '\r' || *line_start == '\0') {
 	    continue;
+	}
+
+	tok = mystrtok(line_start, " \t\n", &tokptr);
+	if (!tok || (tok[0] == '#')) {
+	    continue;
+	}
 
 	if (strcmp(tok, "define") == 0) {
 	    const char *varname;
