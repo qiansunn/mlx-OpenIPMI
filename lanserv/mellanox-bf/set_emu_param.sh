@@ -135,15 +135,47 @@ load_ipmb_host_with_retry() {
 	check_ipmb_connection
 }
 
+# Add IPMB configuration line to mlx-bf.lan.conf using atomic file operations
+# This prevents configuration file corruption during power failures.
+add_ipmb_config() {
+	local i2cbus_slave="$1"
+	local config_line="  ipmb 2 ipmb_dev_int /dev/ipmb-$i2cbus_slave"
+
+	# Skip if IPMB configuration already exists
+	if grep -q "ipmb-$i2cbus_slave" /etc/ipmi/mlx-bf.lan.conf; then
+		return 0
+	fi
+
+	# Problem: Direct file appends (echo >> file) can be interrupted by:
+	# - Power failures during write operations
+	# - System crashes or kernel panics
+	# Incomplete writes leave files with null bytes (0x00) padding
+	# to the expected file size. When configuration parsers encounter lines
+	# that begin with null bytes, they skip the entire line, causing valid
+	# IPMB configuration to be ignored.
+	#
+	# Solution: Atomic operations ensure either complete success or no change:
+	# 1. Create temporary file in same filesystem
+	# 2. Copy original config to temp file
+	# 3. Append new configuration to temp file
+	# 4. Atomically replace original with temp file
+	# If the 4th step is interrupted, the original file will be kept. And the
+	# new configuration will be re-applied after the system is rebooted.
+	local tmpfile
+	tmpfile=$(mktemp /tmp/mlx-bf.lan.conf.XXXXXX) || exit 1
+	cp /etc/ipmi/mlx-bf.lan.conf "$tmpfile" || { rm -f "$tmpfile"; exit 1; }
+	echo "$config_line" >> "$tmpfile" || { rm -f "$tmpfile"; exit 1; }
+	mv "$tmpfile" /etc/ipmi/mlx-bf.lan.conf || { rm -f "$tmpfile"; exit 1; }
+}
+
 if [ "$i2cbus_slave" != "NONE" ]; then
 	# Instantiate the ipmb-dev device
 	if [ ! -c "/dev/ipmb-$i2cbus_slave" ]; then
 		echo ipmb-dev $IPMB_DEV_INT_ADD > $I2C_NEW_DEV_SLAVE
 	fi
 
-	if ! grep -q "ipmb-$i2cbus_slave" /etc/ipmi/mlx-bf.lan.conf; then
-		echo "  ipmb 2 ipmb_dev_int /dev/ipmb-$i2cbus_slave" >> /etc/ipmi/mlx-bf.lan.conf
-	fi
+	add_ipmb_config "$i2cbus_slave"
+	
 	if [ ! "$(lsmod | grep ipmi_msghandler)" ]; then
 		modprobe ipmi_msghandler
 	fi
@@ -1021,9 +1053,7 @@ NO_IPMB_SUPPORT_FLAG=/run/emu_param/no_ipmb_support
 if [ "$i2cbus_slave" != "NONE" ]; then
 	if [ "$source_service" = "set_emu_param" ] && [ -f $NO_IPMB_SUPPORT_FLAG ]; then
 		rm -f $NO_IPMB_SUPPORT_FLAG
-		if ! grep -q "ipmb-$i2cbus_slave" /etc/ipmi/mlx-bf.lan.conf; then
-			echo "  ipmb 2 ipmb_dev_int /dev/ipmb-$i2cbus_slave" >> /etc/ipmi/mlx-bf.lan.conf
-		fi
+		add_ipmb_config "$i2cbus_slave"
 		systemctl restart mlx_ipmid
 	fi
 else
